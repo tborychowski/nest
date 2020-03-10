@@ -1,43 +1,62 @@
 /* eslint no-console: 0 */
 
+const nest = require('nest-api');
 const fs = require('fs');
-const request = require('request-promise-native');
+const chalk = require('chalk');
+// const request = require('request-promise-native');
+
 let configPath, config, session;
+let client;
 
 
 function login (path) {
 	configPath = path;
 	config = require(configPath);
-	return request
-		.post('https://home.nest.com:443/user/login', { form: config, json: true })
-		.then(data => {
-			if (data.error) console.error('Error authenticating: ' + data.error + ' (' + data.error_description + ')');
-			else session = data;
-		});
+	client = new nest(config.username, config.password);
+
+	return new Promise(resolve => {
+		client.login(data => resolve(data));
+	});
+
+	// return request
+	// 	.post('https://home.nest.com:443/user/login', { form: config, json: true })
+	// 	.then(data => {
+	// 		if (data.error) console.error('Error authenticating: ' + data.error + ' (' + data.error_description + ')');
+	// 		else session = data;
+	// 	});
 }
 
 
 function read () {
-	const headers = {
-		'X-nl-user-id': session.userid,
-		'X-nl-protocol-version': '1',
-		Authorization: 'Basic ' + session.access_token,
-	};
-	return request
-		.get(`${session.urls.transport_url}/v2/mobile/${session.user}`, { json: true, headers })
-		.then(parseData);
+
+	return new Promise(resolve => {
+		client.get(data => {
+			data = parseData(data);
+			resolve(data);
+		});
+	});
+
+	// const headers = {
+	// 	'X-nl-user-id': session.userid,
+	// 	'X-nl-protocol-version': '1',
+	// 	Authorization: 'Basic ' + session.access_token,
+	// };
+	// return request
+	// 	.get(`${session.urls.transport_url}/v2/mobile/${session.user}`, { json: true, headers })
+	// 	.then(parseData);
 }
 
 
 function set (temp) {
-	if (!config.deviceId) return console.error('Run without parameters first (at least once).');
-	const headers = {
-		'X-nl-user-id': session.userid,
-		'X-nl-protocol-version': '1',
-		Authorization: 'Basic ' + session.access_token,
-	};
-	const body = {target_change_pending:true, target_temperature: parseFloat(temp)};
-	return request.post(`${session.urls.transport_url}/v2/put/shared.${config.deviceId}`, { json: true, headers, body });
+	console.error(chalk.red('Doesn\'t work ATM!'));
+	// if (!config.deviceId) return console.error('Run without parameters first (at least once).');
+	// const headers = {
+	// 	'X-nl-user-id': session.userid,
+	// 	'X-nl-protocol-version': '1',
+	// 	Authorization: 'Basic ' + session.access_token,
+	// };
+	// const body = {target_change_pending:true, target_temperature: parseFloat(temp)};
+	// return request.post(`${session.urls.transport_url}/v2/put/shared.${config.deviceId}`, { json: true, headers, body });
 }
 
 
@@ -88,5 +107,3 @@ module.exports = {
 	read,
 	set,
 };
-
-
